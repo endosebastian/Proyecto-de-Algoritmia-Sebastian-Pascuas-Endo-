@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sistema de Peluquería</title>
+
+  <style>
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:Arial, sans-serif;
+    }
+
+    body{
+      background:linear-gradient(135deg,#0f172a,#1e293b);
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      color:white;
+      padding:20px;
+    }
+
+    .container{
+      width:100%;
+      max-width:950px;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:24px;
+      padding:30px;
+      backdrop-filter:blur(12px);
+      box-shadow:0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    h1,h2,h3{
+      margin-bottom:15px;
+    }
+
+    .subtitle{
+      opacity:0.8;
+      margin-bottom:25px;
+      text-align:center;
+    }
+
+    input,
+    select{
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      margin-bottom:15px;
+      font-size:15px;
+    }
+
+    button{
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      cursor:pointer;
+      font-size:15px;
+      font-weight:bold;
+      background:#38bdf8;
+      color:white;
+      transition:0.3s;
+      margin-bottom:10px;
+    }
+
+    button:hover{
+      transform:scale(1.02);
+      background:#0ea5e9;
+    }
+
+    .danger{
+      background:#ef4444;
+    }
+
+    .danger:hover{
+      background:#dc2626;
+    }
+
+    .logout{
+      width:150px;
+      background:#ef4444;
+    }
+
+    .logout:hover{
+      background:#dc2626;
+    }
+
+    .hidden{
+      display:none;
+    }
+
+    .card{
+      background:rgba(255,255,255,0.08);
+      padding:18px;
+      border-radius:18px;
+      margin-bottom:15px;
+    }
+
+    .service{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:20px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+      gap:12px;
+      margin-top:20px;
+    }
+
+    .slot{
+      padding:16px;
+      border-radius:14px;
+      background:linear-gradient(135deg,#22c55e,#16a34a);
+      text-align:center;
+      font-weight:bold;
+      cursor:pointer;
+      transition:0.3s;
+    }
+
+    .slot:hover{
+      transform:scale(1.05);
+    }
+
+    .selected{
+      background:#f59e0b;
+    }
+
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:20px;
+      gap:20px;
+    }
+
+    .small{
+      opacity:0.8;
+      font-size:14px;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- LOGIN -->
+
+  <div id="loginScreen">
+
+    <h1 style="text-align:center;">✂️ NEXTCUT</h1>
+
+    <p class="subtitle">
+      Sistema profesional de reservas
+    </p>
+
+    <!-- INICIO -->
+
+    <div id="homeOptions">
+
+      <button onclick="mostrarLogin()">
+        Iniciar Sesión
+      </button>
+
+      <p style="text-align:center;margin:15px 0;opacity:0.8;">
+        ¿No tiene cuenta?
+      </p>
+
+      <button onclick="mostrarRegistro()">
+        Crear cuenta
+      </button>
+
+    </div>
+
+    <!-- LOGIN BOX -->
+
+    <div id="loginBox" class="hidden">
+
+      <input type="text" id="loginUser" placeholder="Usuario">
+
+      <input type="password" id="loginPass" placeholder="Contraseña">
+
+      <button onclick="login()">
+        Ingresar
+      </button>
+
+      <button class="danger" onclick="volverInicio()">
+        Volver
+      </button>
+
+    </div>
+
+    <!-- REGISTER -->
+
+    <div id="registerBox" class="hidden">
+
+      <input type="text" id="registerUser" placeholder="Nuevo usuario">
+
+      <input type="password" id="registerPass" placeholder="Nueva contraseña">
+
+      <button onclick="register()">
+        Crear cuenta
+      </button>
+
+      <button class="danger" onclick="volverInicio()">
+        Volver
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- CLIENTE -->
+
+  <div id="clientPanel" class="hidden">
+
+    <div class="topbar">
+
+      <h2>💈 Panel Cliente</h2>
+
+      <button class="logout" onclick="logout()">
+        Cerrar sesión
+      </button>
+
+    </div>
+
+    <!-- MENU -->
+
+    <div id="clientMenu">
+
+      <button onclick="mostrarSeccion('catalogoSection')">
+        💈 Ver catálogo
+      </button>
+
+      <button onclick="mostrarSeccion('reservarSection')">
+        📅 Reservar cita
+      </button>
+
+      <button onclick="mostrarSeccion('misReservasSection')">
+        📋 Ver mis reservas
+      </button>
+
+    </div>
+
+    <!-- CATALOGO -->
+
+    <div id="catalogoSection" class="hidden">
+
+      <button class="danger" onclick="volverMenuCliente()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+
+        <h3>💈 Catálogo de servicios</h3>
+
+        <br>
+
+        <div id="catalogoCliente"></div>
+
+      </div>
+
+    </div>
+
+    <!-- RESERVAR -->
+
+    <div id="reservarSection" class="hidden">
+
+      <button class="danger" onclick="volverMenuCliente()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+
+        <h3>📅 Reservar cita</h3>
+
+        <br>
+
+        <select id="serviceSelect"></select>
+
+        <input type="date" id="dateInput">
+
+        <button onclick="mostrarHorarios()">
+          Ver horarios disponibles
+        </button>
+
+        <div class="grid" id="slots"></div>
+
+      </div>
+
+    </div>
+
+    <!-- MIS RESERVAS -->
+
+    <div id="misReservasSection" class="hidden">
+
+      <button class="danger" onclick="volverMenuCliente()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+
+        <h3>📋 Mis reservas</h3>
+
+        <br>
+
+        <div id="myReservations"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ADMIN -->
+
+  <div id="adminPanel" class="hidden">
+
+    <div class="topbar">
+
+      <h2>👑 Panel Administrador</h2>
+
+      <button class="logout" onclick="logout()">
+        Cerrar sesión
+      </button>
+
+    </div>
+
+    <!-- MENU ADMIN -->
+
+    <div id="adminMenu">
+
+      <button onclick="mostrarAdmin('addServiceSection')">
+        ➕ Añadir servicio
+      </button>
+
+      <button onclick="mostrarAdmin('servicesSection')">
+        💈 Ver servicios
+      </button>
+
+      <button onclick="mostrarAdmin('editSection')">
+        ✏️ Editar servicio
+      </button>
+
+      <button onclick="mostrarAdmin('reservationsSection')">
+        📅 Ver reservas
+      </button>
+
+    </div>
+
+    <!-- ADD -->
+
+    <div id="addServiceSection" class="hidden">
+
+      <button class="danger" onclick="volverAdmin()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+
+        <h3>➕ Añadir servicio</h3>
+
+        <br>
+
+        <input type="text" id="serviceName" placeholder="Nombre servicio">
+
+        <input type="number" id="servicePrice" placeholder="Precio">
+
+        <button onclick="addService()">
+          Guardar servicio
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- SERVICES -->
+
+    <div id="servicesSection" class="hidden">
+
+      <button class="danger" onclick="volverAdmin()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+
+        <h3>💈 Servicios registrados</h3>
+
+        <br>
+
+        <div id="servicesList"></div>
+
+      </div>
+
+    </div>
+
+    <!-- EDIT -->
+
+    <div id="editSection" class="hidden">
+
+      <button class="danger" onclick="volverAdmin()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+
+        <h3>✏️ Editar servicio</h3>
+
+        <br>
+
+        <select id="editServiceSelect"></select>
+
+        <input type="text" id="editServiceName" placeholder="Nuevo nombre">
+
+        <input type="number" id="editServicePrice" placeholder="Nuevo precio">
+
+        <button onclick="editService()">
+          Guardar cambios
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- RESERVAS -->
+
+    <div id="reservationsSection" class="hidden">
+
+      <button class="danger" onclick="volverAdmin()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+
+        <h3>📅 Reservas del sistema</h3>
+
+        <br>
+
+        <div id="allReservations"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- FIREBASE -->
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  updateDoc,
+  doc
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+// ================= FIREBASE =================
+
+const firebaseConfig = {
+
+  apiKey: "AIzaSyA2uUJtCNG5b6OMNKZAaTz9mVoSFSMX0fQ",
+
+  authDomain: "proyecto-peluqueria-93617.firebaseapp.com",
+
+  projectId: "proyecto-peluqueria-93617",
+
+  storageBucket: "proyecto-peluqueria-93617.firebasestorage.app",
+
+  messagingSenderId: "69097359037",
+
+  appId: "1:69097359037:web:8bb412d56d277f3c9759d4",
+
+  measurementId: "G-XST66D3Q5T"
+
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+
+
+// ================= VARIABLES =================
+
+const ADMIN_USER = "Admn1234";
+const ADMIN_PASS = "Admn1234";
+
+let currentUser = null;
+let selectedHour = null;
+
+
+// ================= REFERENCIAS =================
+
+const usersRef = collection(db, "usuarios");
+
+const servicesRef = collection(db, "servicios");
+
+const reservationsRef = collection(db, "reservas");
+
+
+// ================= REGISTER =================
+
+window.register = async function () {
+
+  const user =
+    document.getElementById("registerUser").value.trim();
+
+  const pass =
+    document.getElementById("registerPass").value.trim();
+
+  if(user.length < 8 || user.length > 12){
+    alert("Usuario inválido");
+    return;
+  }
+
+  if(pass.length < 8 || pass.length > 12){
+    alert("Contraseña inválida");
+    return;
+  }
+
+  const snapshot = await getDocs(usersRef);
+
+  let existe = false;
+
+  snapshot.forEach(docu => {
+
+    const data = docu.data();
+
+    if(data.user === user){
+      existe = true;
+    }
+
+  });
+
+  if(existe){
+    alert("Usuario ya existe");
+    return;
+  }
+
+  await addDoc(usersRef,{
+    user,
+    pass
+  });
+
+  alert("Cuenta creada correctamente");
+
+  volverInicio();
+
+};
+
+
+// ================= LOGIN =================
+
+window.login = async function () {
+
+  const user =
+    document.getElementById("loginUser").value.trim();
+
+  const pass =
+    document.getElementById("loginPass").value.trim();
+
+  // ADMIN
+
+  if(user === ADMIN_USER && pass === ADMIN_PASS){
+
+    currentUser = user;
+
+    document.getElementById("loginScreen")
+      .classList.add("hidden");
+
+    document.getElementById("adminPanel")
+      .classList.remove("hidden");
+
+    loadServices();
+
+    loadReservations();
+
+    return;
+
+  }
+
+  const snapshot = await getDocs(usersRef);
+
+  let encontrado = false;
+
+  snapshot.forEach(docu => {
+
+    const data = docu.data();
+
+    if(data.user === user && data.pass === pass){
+      encontrado = true;
+    }
+
+  });
+
+  if(!encontrado){
+    alert("Credenciales incorrectas");
+    return;
+  }
+
+  currentUser = user;
+
+  document.getElementById("loginScreen")
+    .classList.add("hidden");
+
+  document.getElementById("clientPanel")
+    .classList.remove("hidden");
+
+  loadServiceSelect();
+
+  loadMyReservations();
+
+  loadCatalogoCliente();
+
+};
+
+
+// ================= ADD SERVICE =================
+
+window.addService = async function () {
+
+  const name =
+    document.getElementById("serviceName").value.trim();
+
+  const price =
+    document.getElementById("servicePrice").value;
+
+  if(!name || price <= 0){
+    alert("Datos inválidos");
+    return;
+  }
+
+  await addDoc(servicesRef,{
+    name,
+    price
+  });
+
+  document.getElementById("serviceName").value = "";
+
+  document.getElementById("servicePrice").value = "";
+
+  alert("Servicio añadido");
+
+  loadServices();
+
+};
+
+
+// ================= LOAD SERVICES =================
+
+window.loadServices = async function () {
+
+  const container =
+    document.getElementById("servicesList");
+
+  container.innerHTML = "";
+
+  document.getElementById("editServiceSelect").innerHTML = "";
+
+  const snapshot = await getDocs(servicesRef);
+
+  snapshot.forEach(docu => {
+
+    const s = docu.data();
+
+    document.getElementById("editServiceSelect").innerHTML += `
+      <option value="${docu.id}">
+        ${s.name}
+      </option>
+    `;
+
+    container.innerHTML += `
+      <div class="card service">
+
+        <div>
+          <h4>✂️ ${s.name}</h4>
+          <p class="small">$${s.price}</p>
+        </div>
+
+        <button
+          class="danger"
+          style="width:120px"
+          onclick="deleteService('${docu.id}')"
+        >
+          Eliminar
+        </button>
+
+      </div>
+    `;
+
+  });
+
+};
+
+
+// ================= DELETE SERVICE =================
+
+window.deleteService = async function (id) {
+
+  await deleteDoc(doc(db,"servicios",id));
+
+  loadServices();
+
+};
+
+
+// ================= EDIT SERVICE =================
+
+window.editService = async function () {
+
+  const id =
+    document.getElementById("editServiceSelect").value;
+
+  const newName =
+    document.getElementById("editServiceName").value.trim();
+
+  const newPrice =
+    document.getElementById("editServicePrice").value;
+
+  if(!newName || newPrice <= 0){
+    alert("Datos inválidos");
+    return;
+  }
+
+  await updateDoc(doc(db,"servicios",id),{
+
+    name:newName,
+    price:newPrice
+
+  });
+
+  alert("Servicio actualizado");
+
+  loadServices();
+
+  loadServiceSelect();
+
+};
+
+
+// ================= CLIENTE CATALOGO =================
+
+window.loadCatalogoCliente = async function () {
+
+  const container =
+    document.getElementById("catalogoCliente");
+
+  container.innerHTML = "";
+
+  const snapshot = await getDocs(servicesRef);
+
+  snapshot.forEach(docu => {
+
+    const s = docu.data();
+
+    container.innerHTML += `
+      <div class="card">
+        <h4>✂️ ${s.name}</h4>
+        <p>💰 $${s.price}</p>
+      </div>
+    `;
+
+  });
+
+};
+
+
+// ================= SERVICE SELECT =================
+
+window.loadServiceSelect = async function () {
+
+  const select =
+    document.getElementById("serviceSelect");
+
+  select.innerHTML = "";
+
+  const snapshot = await getDocs(servicesRef);
+
+  snapshot.forEach(docu => {
+
+    const s = docu.data();
+
+    select.innerHTML += `
+      <option value="${docu.id}">
+        ${s.name} - $${s.price}
+      </option>
+    `;
+
+  });
+
+};
+
+
+// ================= HORARIOS =================
+
+window.mostrarHorarios = async function () {
+
+  const date =
+    document.getElementById("dateInput").value;
+
+  if(!date){
+    alert("Seleccione una fecha");
+    return;
+  }
+
+  const slotsDiv =
+    document.getElementById("slots");
+
+  slotsDiv.innerHTML = "";
+
+  const snapshot = await getDocs(reservationsRef);
+
+  const reservas = [];
+
+  snapshot.forEach(docu => {
+    reservas.push(docu.data());
+  });
+
+  for(let hour = 9; hour < 17; hour++){
+
+    if(hour === 12) continue;
+
+    [0,30].forEach(min => {
+
+      const time =
+        `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+
+      const ocupado = reservas.find(r =>
+        r.date === date &&
+        r.time === time
+      );
+
+      if(!ocupado){
+
+        const div = document.createElement("div");
+
+        div.className = "slot";
+
+        div.innerText = time;
+
+        div.onclick = () => {
+
+          document.querySelectorAll(".slot")
+            .forEach(s => s.classList.remove("selected"));
+
+          div.classList.add("selected");
+
+          selectedHour = time;
+
+          reservar();
+
+        };
+
+        slotsDiv.appendChild(div);
+
+      }
+
+    });
+
+  }
+
+  if(slotsDiv.innerHTML === ""){
+    slotsDiv.innerHTML = `
+      <p>No hay horarios disponibles.</p>
+    `;
+  }
+
+};
+
+
+// ================= RESERVAR =================
+
+window.reservar = async function () {
+
+  if(!selectedHour) return;
+
+  const serviceId =
+    document.getElementById("serviceSelect").value;
+
+  const date =
+    document.getElementById("dateInput").value;
+
+  const snapshot = await getDocs(servicesRef);
+
+  let serviceData = null;
+
+  snapshot.forEach(docu => {
+
+    if(docu.id === serviceId){
+      serviceData = docu.data();
+    }
+
+  });
+
+  await addDoc(reservationsRef,{
+
+    user:currentUser,
+    service:serviceData.name,
+    price:serviceData.price,
+    date,
+    time:selectedHour
+
+  });
+
+  alert("Reserva creada correctamente");
+
+  selectedHour = null;
+
+  mostrarHorarios();
+
+  loadMyReservations();
+
+  loadReservations();
+
+};
+
+
+// ================= MIS RESERVAS =================
+
+window.loadMyReservations = async function () {
+
+  const container =
+    document.getElementById("myReservations");
+
+  container.innerHTML = "";
+
+  const snapshot = await getDocs(reservationsRef);
+
+  let hay = false;
+
+  snapshot.forEach(docu => {
+
+    const r = docu.data();
+
+    if(r.user === currentUser){
+
+      hay = true;
+
+      container.innerHTML += `
+        <div class="card">
+
+          <h4>✂️ ${r.service}</h4>
+
+          <p>📅 ${r.date}</p>
+
+          <p>🕒 ${r.time}</p>
+
+          <p>💰 $${r.price}</p>
+
+        </div>
+      `;
+
+    }
+
+  });
+
+  if(!hay){
+    container.innerHTML = `
+      <p>No tienes reservas.</p>
+    `;
+  }
+
+};
+
+
+// ================= ADMIN RESERVAS =================
+
+window.loadReservations = async function () {
+
+  const container =
+    document.getElementById("allReservations");
+
+  container.innerHTML = "";
+
+  const snapshot = await getDocs(reservationsRef);
+
+  let hay = false;
+
+  snapshot.forEach(docu => {
+
+    hay = true;
+
+    const r = docu.data();
+
+    container.innerHTML += `
+      <div class="card">
+
+        <h4>👤 ${r.user}</h4>
+
+        <p>✂️ ${r.service}</p>
+
+        <p>📅 ${r.date}</p>
+
+        <p>🕒 ${r.time}</p>
+
+        <p>💰 $${r.price}</p>
+
+      </div>
+    `;
+
+  });
+
+  if(!hay){
+    container.innerHTML = `
+      <p>No hay reservas.</p>
+    `;
+  }
+
+};
+
+
+// ================= NAVEGACION =================
+
+window.logout = function () {
+  location.reload();
+};
+
+window.mostrarLogin = function () {
+
+  document.getElementById("homeOptions")
+    .classList.add("hidden");
+
+  document.getElementById("loginBox")
+    .classList.remove("hidden");
+
+};
+
+window.mostrarRegistro = function () {
+
+  document.getElementById("homeOptions")
+    .classList.add("hidden");
+
+  document.getElementById("registerBox")
+    .classList.remove("hidden");
+
+};
+
+window.volverInicio = function () {
+
+  document.getElementById("homeOptions")
+    .classList.remove("hidden");
+
+  document.getElementById("loginBox")
+    .classList.add("hidden");
+
+  document.getElementById("registerBox")
+    .classList.add("hidden");
+
+};
+
+window.mostrarSeccion = function (id) {
+
+  document.getElementById("clientMenu")
+    .classList.add("hidden");
+
+  document.getElementById(id)
+    .classList.remove("hidden");
+
+};
+
+window.volverMenuCliente = function () {
+
+  document.getElementById("clientMenu")
+    .classList.remove("hidden");
+
+  document.getElementById("catalogoSection")
+    .classList.add("hidden");
+
+  document.getElementById("reservarSection")
+    .classList.add("hidden");
+
+  document.getElementById("misReservasSection")
+    .classList.add("hidden");
+
+};
+
+window.mostrarAdmin = function (id) {
+
+  document.getElementById("adminMenu")
+    .classList.add("hidden");
+
+  document.getElementById(id)
+    .classList.remove("hidden");
+
+};
+
+window.volverAdmin = function () {
+
+  document.getElementById("adminMenu")
+    .classList.remove("hidden");
+
+  document.getElementById("addServiceSection")
+    .classList.add("hidden");
+
+  document.getElementById("servicesSection")
+    .classList.add("hidden");
+
+  document.getElementById("editSection")
+    .classList.add("hidden");
+
+  document.getElementById("reservationsSection")
+    .classList.add("hidden");
+
+};
+
+</script>
+
+</body>
+</html>
