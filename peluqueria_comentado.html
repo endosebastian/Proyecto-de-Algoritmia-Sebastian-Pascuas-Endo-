@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║              NEXTCUT - SISTEMA DE PELUQUERÍA                 ║
+  ║                                                              ║
+  ║  Aplicación web de reservas para una peluquería.             ║
+  ║  Usa Firebase Firestore como base de datos en la nube.       ║
+  ║                                                              ║
+  ║  ROLES:                                                      ║
+  ║    → Administrador: gestiona servicios y ve todas las citas  ║
+  ║    → Cliente: se registra, inicia sesión y reserva citas     ║
+  ║                                                              ║
+  ║  TECNOLOGÍAS:                                                ║
+  ║    → HTML5 + CSS3 (diseño glassmorphism oscuro)              ║
+  ║    → JavaScript vanilla (ES Modules)                         ║
+  ║    → Firebase Firestore v10 (base de datos NoSQL en la nube) ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <!--
+    viewport: hace que el diseño sea responsivo en móviles.
+    width=device-width → usa el ancho real del dispositivo.
+    initial-scale=1.0  → sin zoom al cargar.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sistema de Peluquería</title>
+
+  <style>
+
+    /* ─── RESET GLOBAL ───────────────────────────────────────────
+       Elimina márgenes y rellenos que los navegadores añaden
+       por defecto a todos los elementos. box-sizing:border-box
+       hace que el padding y el borde se incluyan dentro del
+       ancho/alto del elemento (más predecible al maquetear).
+    ─────────────────────────────────────────────────────────── */
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:Arial, sans-serif;
+    }
+
+    /* ─── FONDO DE PANTALLA COMPLETA ────────────────────────────
+       El body ocupa toda la ventana (min-height:100vh).
+       Se centra su único hijo (.container) con flexbox.
+       El fondo es un degradado diagonal de azul muy oscuro
+       (típico del estilo "glassmorphism").
+    ─────────────────────────────────────────────────────────── */
+    body{
+      background:linear-gradient(135deg,#0f172a,#1e293b);
+      min-height:100vh;
+      display:flex;
+      justify-content:center;  /* centra horizontalmente */
+      align-items:center;       /* centra verticalmente */
+      color:white;
+      padding:20px;
+    }
+
+    /* ─── TARJETA PRINCIPAL (contenedor de toda la app) ─────────
+       Vidrio esmerilado: fondo semitransparente + borde sutil +
+       blur del fondo (backdrop-filter). Sombra profunda para
+       efecto de elevación.
+    ─────────────────────────────────────────────────────────── */
+    .container{
+      width:100%;
+      max-width:950px;
+      background:rgba(255,255,255,0.05);  /* blanco al 5% de opacidad */
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:24px;
+      padding:30px;
+      backdrop-filter:blur(12px);         /* difumina lo que hay detrás */
+      box-shadow:0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    /* ─── TÍTULOS ────────────────────────────────────────────── */
+    h1,h2,h3{
+      margin-bottom:15px;
+    }
+
+    /* ─── SUBTÍTULO CENTRADO ─────────────────────────────────── */
+    .subtitle{
+      opacity:0.8;          /* ligeramente transparente */
+      margin-bottom:25px;
+      text-align:center;
+    }
+
+    /* ─── CAMPOS DE TEXTO Y DESPLEGABLES ────────────────────────
+       Ocupan todo el ancho disponible. Sin borde propio
+       (el fondo blanco del input da contraste suficiente).
+    ─────────────────────────────────────────────────────────── */
+    input,
+    select{
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      margin-bottom:15px;
+      font-size:15px;
+    }
+
+    /* ─── BOTONES ────────────────────────────────────────────────
+       Color azul cielo por defecto. Al hacer hover crecen un
+       2% (transform:scale) y se oscurecen levemente.
+       transition:0.3s → suaviza la animación del hover.
+    ─────────────────────────────────────────────────────────── */
+    button{
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      cursor:pointer;
+      font-size:15px;
+      font-weight:bold;
+      background:#38bdf8;   /* azul cielo */
+      color:white;
+      transition:0.3s;
+      margin-bottom:10px;
+    }
+
+    button:hover{
+      transform:scale(1.02);
+      background:#0ea5e9;
+    }
+
+    /* ─── BOTÓN PELIGROSO (eliminar / volver) ───────────────── */
+    .danger{
+      background:#ef4444;   /* rojo */
+    }
+
+    .danger:hover{
+      background:#dc2626;
+    }
+
+    /* ─── BOTÓN CERRAR SESIÓN (pequeño, en la barra superior) ── */
+    .logout{
+      width:150px;          /* no ocupa todo el ancho */
+      background:#ef4444;
+    }
+
+    .logout:hover{
+      background:#dc2626;
+    }
+
+    /* ─── CLASE UTILIDAD: OCULTAR ELEMENTO ──────────────────────
+       Se agrega/quita con JavaScript para mostrar/ocultar
+       pantallas y secciones sin recargar la página.
+    ─────────────────────────────────────────────────────────── */
+    .hidden{
+      display:none;
+    }
+
+    /* ─── TARJETA INTERIOR ───────────────────────────────────── */
+    .card{
+      background:rgba(255,255,255,0.08);
+      padding:18px;
+      border-radius:18px;
+      margin-bottom:15px;
+    }
+
+    /* ─── FILA DE SERVICIO (nombre a la izquierda, botón a la derecha) */
+    .service{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:20px;
+    }
+
+    /* ─── CUADRÍCULA DE HORARIOS ─────────────────────────────────
+       auto-fit + minmax → número de columnas automático según
+       el ancho disponible; cada celda mínimo 120px.
+    ─────────────────────────────────────────────────────────── */
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+      gap:12px;
+      margin-top:20px;
+    }
+
+    /* ─── CASILLA DE HORARIO DISPONIBLE ─────────────────────────
+       Degradado verde. Al hacer clic se le quita y se añade
+       la clase .selected (color ámbar).
+    ─────────────────────────────────────────────────────────── */
+    .slot{
+      padding:16px;
+      border-radius:14px;
+      background:linear-gradient(135deg,#22c55e,#16a34a);
+      text-align:center;
+      font-weight:bold;
+      cursor:pointer;
+      transition:0.3s;
+    }
+
+    .slot:hover{
+      transform:scale(1.05);
+    }
+
+    /* ─── HORARIO SELECCIONADO (color ámbar) ─────────────────── */
+    .selected{
+      background:#f59e0b;
+    }
+
+    /* ─── BARRA SUPERIOR (título + botón cerrar sesión) ──────── */
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:20px;
+      gap:20px;
+    }
+
+    /* ─── TEXTO PEQUEÑO / SECUNDARIO ─────────────────────────── */
+    .small{
+      opacity:0.8;
+      font-size:14px;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║                  ESTRUCTURA HTML                             ║
+  ║                                                              ║
+  ║  La app tiene TRES "pantallas" principales que se           ║
+  ║  muestran u ocultan con la clase .hidden:                    ║
+  ║                                                              ║
+  ║   1. #loginScreen  → pantalla de inicio / login / registro  ║
+  ║   2. #clientPanel  → panel del cliente (ver y reservar)      ║
+  ║   3. #adminPanel   → panel del administrador                 ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════════════════════
+       PANTALLA 1: LOGIN / REGISTRO
+       Contiene tres sub-vistas que se alternan:
+         • #homeOptions  → botones "Iniciar sesión" y "Crear cuenta"
+         • #loginBox     → formulario de login
+         • #registerBox  → formulario de registro
+       ══════════════════════════════════════════════════════════ -->
+
+  <div id="loginScreen">
+
+    <h1 style="text-align:center;">✂️ NEXTCUT</h1>
+
+    <p class="subtitle">
+      Sistema profesional de reservas
+    </p>
+
+    <!-- Vista inicial: dos botones de navegación -->
+    <div id="homeOptions">
+
+      <!-- Al hacer clic llama a mostrarLogin() en JS,
+           que oculta homeOptions y muestra loginBox -->
+      <button onclick="mostrarLogin()">
+        Iniciar Sesión
+      </button>
+
+      <p style="text-align:center;margin:15px 0;opacity:0.8;">
+        ¿No tiene cuenta?
+      </p>
+
+      <!-- Al hacer clic llama a mostrarRegistro() en JS -->
+      <button onclick="mostrarRegistro()">
+        Crear cuenta
+      </button>
+
+    </div>
+
+    <!-- Formulario de inicio de sesión (oculto por defecto) -->
+    <div id="loginBox" class="hidden">
+
+      <input type="text"     id="loginUser" placeholder="Usuario">
+      <input type="password" id="loginPass" placeholder="Contraseña">
+
+      <!-- login() valida credenciales contra Firestore -->
+      <button onclick="login()">
+        Ingresar
+      </button>
+
+      <!-- Regresa a homeOptions sin hacer nada -->
+      <button class="danger" onclick="volverInicio()">
+        Volver
+      </button>
+
+    </div>
+
+    <!-- Formulario de registro (oculto por defecto) -->
+    <div id="registerBox" class="hidden">
+
+      <input type="text"     id="registerUser" placeholder="Nuevo usuario">
+      <input type="password" id="registerPass" placeholder="Nueva contraseña">
+
+      <!-- register() guarda el nuevo usuario en Firestore -->
+      <button onclick="register()">
+        Crear cuenta
+      </button>
+
+      <button class="danger" onclick="volverInicio()">
+        Volver
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       PANTALLA 2: PANEL DEL CLIENTE
+       Visible solo tras un login exitoso de un cliente.
+       Contiene un menú con tres secciones:
+         • Catálogo de servicios (solo lectura)
+         • Reservar cita (seleccionar servicio, fecha y hora)
+         • Mis reservas (historial del usuario actual)
+       ══════════════════════════════════════════════════════════ -->
+
+  <div id="clientPanel" class="hidden">
+
+    <!-- Barra superior con título y botón de cerrar sesión -->
+    <div class="topbar">
+      <h2>💈 Panel Cliente</h2>
+      <!-- logout() recarga la página, borrando el estado en memoria -->
+      <button class="logout" onclick="logout()">
+        Cerrar sesión
+      </button>
+    </div>
+
+    <!-- Menú principal del cliente -->
+    <div id="clientMenu">
+
+      <!-- mostrarSeccion() oculta el menú y muestra la sección pedida -->
+      <button onclick="mostrarSeccion('catalogoSection')">
+        💈 Ver catálogo
+      </button>
+
+      <button onclick="mostrarSeccion('reservarSection')">
+        📅 Reservar cita
+      </button>
+
+      <button onclick="mostrarSeccion('misReservasSection')">
+        📋 Ver mis reservas
+      </button>
+
+    </div>
+
+    <!-- ── SECCIÓN: Catálogo (oculta por defecto) ────────────── -->
+    <div id="catalogoSection" class="hidden">
+
+      <button class="danger" onclick="volverMenuCliente()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+        <h3>💈 Catálogo de servicios</h3>
+        <br>
+        <!-- loadCatalogoCliente() inyecta aquí las tarjetas de cada servicio -->
+        <div id="catalogoCliente"></div>
+      </div>
+
+    </div>
+
+    <!-- ── SECCIÓN: Reservar (oculta por defecto) ────────────── -->
+    <div id="reservarSection" class="hidden">
+
+      <button class="danger" onclick="volverMenuCliente()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+        <h3>📅 Reservar cita</h3>
+        <br>
+
+        <!-- Desplegable con los servicios disponibles.
+             Se rellena dinámicamente con loadServiceSelect() -->
+        <select id="serviceSelect"></select>
+
+        <!-- El usuario elige una fecha -->
+        <input type="date" id="dateInput">
+
+        <!-- mostrarHorarios() consulta Firestore y pinta los slots libres -->
+        <button onclick="mostrarHorarios()">
+          Ver horarios disponibles
+        </button>
+
+        <!-- Aquí aparecen los bloques de hora (9:00 a 16:30, sin 12:xx) -->
+        <div class="grid" id="slots"></div>
+
+      </div>
+
+    </div>
+
+    <!-- ── SECCIÓN: Mis reservas (oculta por defecto) ─────────── -->
+    <div id="misReservasSection" class="hidden">
+
+      <button class="danger" onclick="volverMenuCliente()">
+        ⬅️ Volver
+      </button>
+
+      <br><br>
+
+      <div class="card">
+        <h3>📋 Mis reservas</h3>
+        <br>
+        <!-- loadMyReservations() filtra las reservas del usuario actual -->
+        <div id="myReservations"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       PANTALLA 3: PANEL DEL ADMINISTRADOR
+       Visible solo cuando el admin inicia sesión.
+       Secciones:
+         • Añadir servicio  → crea un documento en la colección "servicios"
+         • Ver servicios    → lista todos los servicios con opción de eliminar
+         • Editar servicio  → modifica nombre y precio de un servicio
+         • Ver reservas     → muestra TODAS las citas de todos los clientes
+       ══════════════════════════════════════════════════════════ -->
+
+  <div id="adminPanel" class="hidden">
+
+    <div class="topbar">
+      <h2>👑 Panel Administrador</h2>
+      <button class="logout" onclick="logout()">
+        Cerrar sesión
+      </button>
+    </div>
+
+    <!-- Menú principal del admin -->
+    <div id="adminMenu">
+
+      <!-- mostrarAdmin() oculta el menú y muestra la sección elegida -->
+      <button onclick="mostrarAdmin('addServiceSection')">
+        ➕ Añadir servicio
+      </button>
+
+      <button onclick="mostrarAdmin('servicesSection')">
+        💈 Ver servicios
+      </button>
+
+      <button onclick="mostrarAdmin('editSection')">
+        ✏️ Editar servicio
+      </button>
+
+      <button onclick="mostrarAdmin('reservationsSection')">
+        📅 Ver reservas
+      </button>
+
+    </div>
+
+    <!-- ── SECCIÓN: Añadir servicio ──────────────────────────── -->
+    <div id="addServiceSection" class="hidden">
+
+      <button class="danger" onclick="volverAdmin()">⬅️ Volver</button>
+      <br><br>
+
+      <div class="card">
+        <h3>➕ Añadir servicio</h3>
+        <br>
+        <!-- addService() toma estos valores y crea un documento en Firestore -->
+        <input type="text"   id="serviceName"  placeholder="Nombre servicio">
+        <input type="number" id="servicePrice" placeholder="Precio">
+        <button onclick="addService()">Guardar servicio</button>
+      </div>
+
+    </div>
+
+    <!-- ── SECCIÓN: Ver servicios ─────────────────────────────── -->
+    <div id="servicesSection" class="hidden">
+
+      <button class="danger" onclick="volverAdmin()">⬅️ Volver</button>
+      <br><br>
+
+      <div class="card">
+        <h3>💈 Servicios registrados</h3>
+        <br>
+        <!-- loadServices() rellena este div con una tarjeta por servicio -->
+        <div id="servicesList"></div>
+      </div>
+
+    </div>
+
+    <!-- ── SECCIÓN: Editar servicio ───────────────────────────── -->
+    <div id="editSection" class="hidden">
+
+      <button class="danger" onclick="volverAdmin()">⬅️ Volver</button>
+      <br><br>
+
+      <div class="card">
+        <h3>✏️ Editar servicio</h3>
+        <br>
+        <!-- Desplegable con los servicios existentes (mismo que loadServices rellena) -->
+        <select id="editServiceSelect"></select>
+        <input type="text"   id="editServiceName"  placeholder="Nuevo nombre">
+        <input type="number" id="editServicePrice" placeholder="Nuevo precio">
+        <!-- editService() actualiza el documento en Firestore -->
+        <button onclick="editService()">Guardar cambios</button>
+      </div>
+
+    </div>
+
+    <!-- ── SECCIÓN: Ver todas las reservas ───────────────────── -->
+    <div id="reservationsSection" class="hidden">
+
+      <button class="danger" onclick="volverAdmin()">⬅️ Volver</button>
+      <br><br>
+
+      <div class="card">
+        <h3>📅 Reservas del sistema</h3>
+        <br>
+        <!-- loadReservations() inyecta aquí todas las citas -->
+        <div id="allReservations"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div><!-- fin .container -->
+
+
+<!-- ════════════════════════════════════════════════════════════
+     JAVASCRIPT (ES Module)
+     Se usa "type=module" para poder escribir:
+       import { ... } from "url"
+     Sin esto no se pueden usar los imports de Firebase.
+     ════════════════════════════════════════════════════════════ -->
+<script type="module">
+
+/*
+  ──────────────────────────────────────────────────────────────
+  IMPORTACIONES DE FIREBASE
+  Se cargan directamente desde la CDN oficial de Google.
+  No se necesita instalar nada localmente.
+
+  • initializeApp   → crea la instancia de la app Firebase
+  • getFirestore    → obtiene el objeto de la base de datos
+  • collection      → referencia a una colección (carpeta) en Firestore
+  • addDoc          → crea un documento nuevo con ID automático
+  • getDocs         → lee TODOS los documentos de una colección
+  • deleteDoc       → elimina un documento por referencia
+  • updateDoc       → actualiza campos de un documento existente
+  • doc             → obtiene la referencia a un documento específico por ID
+  ──────────────────────────────────────────────────────────────
+*/
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  updateDoc,
+  doc
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+/* ════════════════════════════════════════════════════════════
+   CONFIGURACIÓN DE FIREBASE
+   Estos datos los genera la consola de Firebase al crear
+   el proyecto. Identifican de forma única tu app en la nube.
+
+   ⚠️ IMPORTANTE: en proyectos reales, estas claves se guardan
+   en variables de entorno (.env) y NUNCA se suben a GitHub,
+   ya que cualquiera que las vea puede acceder a tu base de datos.
+   ════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey:            "AIzaSyA2uUJtCNG5b6OMNKZAaTz9mVoSFSMX0fQ",
+  authDomain:        "proyecto-peluqueria-93617.firebaseapp.com",
+  projectId:         "proyecto-peluqueria-93617",
+  storageBucket:     "proyecto-peluqueria-93617.firebasestorage.app",
+  messagingSenderId: "69097359037",
+  appId:             "1:69097359037:web:8bb412d56d277f3c9759d4",
+  measurementId:     "G-XST66D3Q5T"
+};
+
+/*
+  Inicializa Firebase con la configuración anterior.
+  Devuelve el objeto "app" que representa la conexión activa.
+*/
+const app = initializeApp(firebaseConfig);
+
+/*
+  Obtiene el objeto Firestore (la base de datos).
+  A partir de "db" haremos todas las consultas y escrituras.
+*/
+const db = getFirestore(app);
+
+
+/* ════════════════════════════════════════════════════════════
+   VARIABLES GLOBALES
+
+   • ADMIN_USER / ADMIN_PASS: credenciales del administrador
+     hardcodeadas. En producción esto debería manejarse con
+     Firebase Authentication para no exponer la contraseña.
+
+   • currentUser: guarda el nombre del usuario que inició sesión.
+     Se usa para filtrar sus reservas y asociar nuevas citas.
+
+   • selectedHour: almacena el horario que el cliente clickeó
+     en la grilla. Se limpia a null tras confirmar la reserva.
+   ════════════════════════════════════════════════════════════ */
+const ADMIN_USER = "Admn1234";
+const ADMIN_PASS = "Admn1234";
+
+let currentUser  = null;   // null = nadie ha iniciado sesión
+let selectedHour = null;   // null = ningún horario seleccionado
+
+
+/* ════════════════════════════════════════════════════════════
+   REFERENCIAS A COLECCIONES DE FIRESTORE
+
+   Firestore organiza los datos en "colecciones" (como tablas)
+   y "documentos" (como filas, pero en formato JSON).
+
+   • usersRef        → colección "usuarios"   (clientes registrados)
+   • servicesRef     → colección "servicios"  (corte, tinte, etc.)
+   • reservationsRef → colección "reservas"   (citas agendadas)
+   ════════════════════════════════════════════════════════════ */
+const usersRef        = collection(db, "usuarios");
+const servicesRef     = collection(db, "servicios");
+const reservationsRef = collection(db, "reservas");
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: register()
+   Registra un nuevo cliente en la colección "usuarios".
+
+   FLUJO:
+     1. Lee los campos del formulario de registro.
+     2. Valida que usuario y contraseña tengan entre 8 y 12 caracteres.
+     3. Consulta Firestore para ver si ese nombre de usuario ya existe.
+     4. Si no existe, crea el documento { user, pass } en Firestore.
+     5. Avisa al usuario y vuelve a la pantalla de inicio.
+
+   ⚠️ La contraseña se guarda en TEXTO PLANO, lo cual es
+      inseguro. En producción debe usarse Firebase Auth o
+      al menos un hash (bcrypt, SHA-256, etc.).
+   ════════════════════════════════════════════════════════════ */
+window.register = async function () {
+
+  // Obtiene y limpia los espacios al inicio/fin de los campos
+  const user = document.getElementById("registerUser").value.trim();
+  const pass = document.getElementById("registerPass").value.trim();
+
+  // Validación de longitud (mínimo 8, máximo 12 caracteres)
+  if(user.length < 8 || user.length > 12){
+    alert("Usuario inválido");
+    return; // detiene la función si no cumple
+  }
+
+  if(pass.length < 8 || pass.length > 12){
+    alert("Contraseña inválida");
+    return;
+  }
+
+  // Descarga todos los usuarios de Firestore para buscar duplicados
+  const snapshot = await getDocs(usersRef);
+
+  let existe = false;
+
+  // forEach del snapshot: itera cada documento encontrado
+  snapshot.forEach(docu => {
+    const data = docu.data(); // extrae el objeto JSON del documento
+    if(data.user === user){
+      existe = true; // encontró un usuario con el mismo nombre
+    }
+  });
+
+  if(existe){
+    alert("Usuario ya existe");
+    return;
+  }
+
+  // Crea el documento en Firestore con los datos del nuevo usuario
+  await addDoc(usersRef,{
+    user, // equivale a user: user
+    pass  // equivale a pass: pass
+  });
+
+  alert("Cuenta creada correctamente");
+
+  volverInicio(); // regresa al menú de login/registro
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: login()
+   Autentica al usuario (cliente o administrador).
+
+   FLUJO:
+     1. Lee usuario y contraseña del formulario.
+     2. Compara con las credenciales del admin (hardcodeadas).
+        → Si coinciden: muestra el panel de admin y carga sus datos.
+     3. Si no es el admin, busca en la colección "usuarios" de Firestore.
+        → Si encuentra coincidencia: muestra el panel de cliente.
+        → Si no: muestra error.
+   ════════════════════════════════════════════════════════════ */
+window.login = async function () {
+
+  const user = document.getElementById("loginUser").value.trim();
+  const pass = document.getElementById("loginPass").value.trim();
+
+  // ── Verificación de administrador ──────────────────────────
+  if(user === ADMIN_USER && pass === ADMIN_PASS){
+
+    currentUser = user;
+
+    // Oculta la pantalla de login y muestra el panel de admin
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("adminPanel").classList.remove("hidden");
+
+    // Precarga los datos que el admin necesita ver
+    loadServices();
+    loadReservations();
+
+    return; // termina la función aquí (no sigue buscando en Firestore)
+  }
+
+  // ── Verificación de cliente en Firestore ───────────────────
+  const snapshot = await getDocs(usersRef);
+
+  let encontrado = false;
+
+  snapshot.forEach(docu => {
+    const data = docu.data();
+    if(data.user === user && data.pass === pass){
+      encontrado = true;
+    }
+  });
+
+  if(!encontrado){
+    alert("Credenciales incorrectas");
+    return;
+  }
+
+  currentUser = user;
+
+  // Oculta login, muestra panel de cliente
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("clientPanel").classList.remove("hidden");
+
+  // Precarga los datos del cliente
+  loadServiceSelect();    // llena el <select> de servicios para reservar
+  loadMyReservations();   // muestra sus citas anteriores
+  loadCatalogoCliente();  // muestra el catálogo de servicios
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: addService()
+   El administrador crea un nuevo servicio (corte, tinte, etc.).
+
+   FLUJO:
+     1. Lee nombre y precio del formulario.
+     2. Valida que el nombre no esté vacío y el precio sea positivo.
+     3. Guarda el documento { name, price } en la colección "servicios".
+     4. Limpia el formulario y recarga la lista de servicios.
+   ════════════════════════════════════════════════════════════ */
+window.addService = async function () {
+
+  const name  = document.getElementById("serviceName").value.trim();
+  const price = document.getElementById("servicePrice").value;
+
+  // price <= 0 rechaza precios negativos o cero
+  if(!name || price <= 0){
+    alert("Datos inválidos");
+    return;
+  }
+
+  await addDoc(servicesRef,{
+    name,
+    price
+  });
+
+  // Limpia los campos tras guardar
+  document.getElementById("serviceName").value  = "";
+  document.getElementById("servicePrice").value = "";
+
+  alert("Servicio añadido");
+
+  loadServices(); // actualiza la lista visible en pantalla
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: loadServices()
+   Carga y muestra todos los servicios en el panel de admin.
+
+   Hace DOS cosas a la vez:
+     1. Llena #servicesList con tarjetas que muestran nombre,
+        precio y un botón "Eliminar" para cada servicio.
+     2. Llena #editServiceSelect con las opciones del desplegable
+        de edición (necesita el id del documento de Firestore).
+   ════════════════════════════════════════════════════════════ */
+window.loadServices = async function () {
+
+  const container = document.getElementById("servicesList");
+  container.innerHTML = ""; // limpia antes de repintar
+
+  // También resetea el desplegable de edición
+  document.getElementById("editServiceSelect").innerHTML = "";
+
+  const snapshot = await getDocs(servicesRef);
+
+  snapshot.forEach(docu => {
+
+    const s = docu.data(); // { name, price }
+
+    // Añade una opción al <select> de edición.
+    // value = docu.id (el ID único de Firestore, no el nombre)
+    document.getElementById("editServiceSelect").innerHTML += `
+      <option value="${docu.id}">
+        ${s.name}
+      </option>
+    `;
+
+    // Añade la tarjeta visual con botón de eliminar.
+    // deleteService recibe el ID del documento para borrarlo exactamente.
+    container.innerHTML += `
+      <div class="card service">
+        <div>
+          <h4>✂️ ${s.name}</h4>
+          <p class="small">$${s.price}</p>
+        </div>
+        <button
+          class="danger"
+          style="width:120px"
+          onclick="deleteService('${docu.id}')"
+        >
+          Eliminar
+        </button>
+      </div>
+    `;
+  });
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: deleteService(id)
+   Elimina un servicio de Firestore dado su ID de documento.
+
+   doc(db, "servicios", id) construye la referencia exacta
+   al documento que se quiere borrar.
+   Después recarga la lista para reflejar el cambio.
+   ════════════════════════════════════════════════════════════ */
+window.deleteService = async function (id) {
+  await deleteDoc(doc(db,"servicios",id));
+  loadServices(); // actualiza la vista
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: editService()
+   Actualiza el nombre y precio de un servicio existente.
+
+   FLUJO:
+     1. Lee el ID del servicio seleccionado en el desplegable.
+     2. Lee el nuevo nombre y precio de los inputs de edición.
+     3. Valida los datos.
+     4. Llama a updateDoc() con solo los campos que cambian.
+     5. Recarga servicios y el <select> del cliente.
+   ════════════════════════════════════════════════════════════ */
+window.editService = async function () {
+
+  const id       = document.getElementById("editServiceSelect").value;
+  const newName  = document.getElementById("editServiceName").value.trim();
+  const newPrice = document.getElementById("editServicePrice").value;
+
+  if(!newName || newPrice <= 0){
+    alert("Datos inválidos");
+    return;
+  }
+
+  // updateDoc actualiza solo los campos indicados, no borra el resto
+  await updateDoc(doc(db,"servicios",id),{
+    name:  newName,
+    price: newPrice
+  });
+
+  alert("Servicio actualizado");
+
+  loadServices();      // actualiza lista del admin
+  loadServiceSelect(); // actualiza desplegable del cliente
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: loadCatalogoCliente()
+   Muestra el catálogo de servicios al cliente (solo lectura,
+   sin botones de eliminar ni editar).
+   ════════════════════════════════════════════════════════════ */
+window.loadCatalogoCliente = async function () {
+
+  const container = document.getElementById("catalogoCliente");
+  container.innerHTML = "";
+
+  const snapshot = await getDocs(servicesRef);
+
+  snapshot.forEach(docu => {
+    const s = docu.data();
+    container.innerHTML += `
+      <div class="card">
+        <h4>✂️ ${s.name}</h4>
+        <p>💰 $${s.price}</p>
+      </div>
+    `;
+  });
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: loadServiceSelect()
+   Rellena el <select id="serviceSelect"> del formulario
+   de reserva con los servicios disponibles.
+   Cada opción muestra "nombre - $precio" y su value es
+   el ID del documento en Firestore (necesario para guardar
+   qué servicio se reservó).
+   ════════════════════════════════════════════════════════════ */
+window.loadServiceSelect = async function () {
+
+  const select = document.getElementById("serviceSelect");
+  select.innerHTML = ""; // limpia antes de repintar
+
+  const snapshot = await getDocs(servicesRef);
+
+  snapshot.forEach(docu => {
+    const s = docu.data();
+    select.innerHTML += `
+      <option value="${docu.id}">
+        ${s.name} - $${s.price}
+      </option>
+    `;
+  });
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: mostrarHorarios()
+   Genera la grilla de horarios disponibles para una fecha.
+
+   HORARIO DE TRABAJO:
+     • 09:00 a 16:30 (hasta las 17:00 sin incluir)
+     • En bloques de 30 minutos: :00 y :30
+     • La hora 12:xx (mediodía) se omite → bloque de descanso
+
+   LÓGICA DE DISPONIBILIDAD:
+     • Descarga TODAS las reservas de Firestore.
+     • Para cada bloque de 30 min verifica si ya existe
+       una reserva con la misma fecha y hora.
+     • Solo muestra los bloques que están libres.
+
+   AL HACER CLIC EN UN HORARIO:
+     • Se deseleccionan todos los demás (quita .selected).
+     • Se marca el clickeado con .selected.
+     • Se guarda en selectedHour y se llama a reservar().
+   ════════════════════════════════════════════════════════════ */
+window.mostrarHorarios = async function () {
+
+  const date = document.getElementById("dateInput").value;
+
+  if(!date){
+    alert("Seleccione una fecha");
+    return;
+  }
+
+  const slotsDiv = document.getElementById("slots");
+  slotsDiv.innerHTML = ""; // limpia horarios anteriores
+
+  // Descarga todas las reservas para saber cuáles están ocupadas
+  const snapshot = await getDocs(reservationsRef);
+
+  const reservas = [];
+  snapshot.forEach(docu => {
+    reservas.push(docu.data()); // { user, service, date, time, price }
+  });
+
+  // Itera de las 9 a las 16 (la hora 17 no se incluye)
+  for(let hour = 9; hour < 17; hour++){
+
+    if(hour === 12) continue; // salta la hora del mediodía
+
+    // Para cada hora genera dos slots: :00 y :30
+    [0,30].forEach(min => {
+
+      // Formatea la hora como "HH:MM" (ej: "09:00", "13:30")
+      const time = `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+
+      // Busca si ya hay una reserva para esa fecha y hora
+      const ocupado = reservas.find(r =>
+        r.date === date &&
+        r.time === time
+      );
+
+      // Solo crea el bloque si está libre
+      if(!ocupado){
+
+        const div = document.createElement("div");
+        div.className = "slot";
+        div.innerText = time;
+
+        div.onclick = () => {
+          // Deselecciona todos los slots
+          document.querySelectorAll(".slot")
+            .forEach(s => s.classList.remove("selected"));
+
+          // Selecciona el clickeado
+          div.classList.add("selected");
+
+          // Guarda el horario elegido en la variable global
+          selectedHour = time;
+
+          // Confirma la reserva inmediatamente
+          reservar();
+        };
+
+        slotsDiv.appendChild(div);
+      }
+
+    }); // fin forEach([0,30])
+
+  } // fin for(hour)
+
+  // Si no quedó ningún slot libre, muestra mensaje
+  if(slotsDiv.innerHTML === ""){
+    slotsDiv.innerHTML = `<p>No hay horarios disponibles.</p>`;
+  }
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: reservar()
+   Crea la reserva en Firestore tras elegir un horario.
+
+   FLUJO:
+     1. Verifica que hay un horario seleccionado (selectedHour).
+     2. Obtiene el servicio seleccionado en el <select>.
+     3. Busca los datos de ese servicio en Firestore
+        (para guardar nombre y precio en el momento de la reserva).
+     4. Crea el documento en la colección "reservas":
+        { user, service, price, date, time }
+     5. Resetea selectedHour, recarga horarios y reservas.
+
+   NOTA: guardar nombre y precio junto a la reserva es una
+   buena práctica: si el precio del servicio cambia después,
+   la reserva registrada muestra el precio original.
+   ════════════════════════════════════════════════════════════ */
+window.reservar = async function () {
+
+  if(!selectedHour) return; // seguridad: no hacer nada si no hay hora
+
+  const serviceId = document.getElementById("serviceSelect").value;
+  const date      = document.getElementById("dateInput").value;
+
+  // Busca el documento del servicio para extraer nombre y precio
+  const snapshot = await getDocs(servicesRef);
+
+  let serviceData = null;
+
+  snapshot.forEach(docu => {
+    if(docu.id === serviceId){
+      serviceData = docu.data(); // { name, price }
+    }
+  });
+
+  // Crea la reserva en Firestore
+  await addDoc(reservationsRef,{
+    user:    currentUser,       // nombre del cliente logueado
+    service: serviceData.name,  // nombre del servicio en ese momento
+    price:   serviceData.price, // precio del servicio en ese momento
+    date,                       // fecha elegida (string "YYYY-MM-DD")
+    time:    selectedHour       // hora elegida (string "HH:MM")
+  });
+
+  alert("Reserva creada correctamente");
+
+  selectedHour = null; // resetea la selección
+
+  // Refresca vistas
+  mostrarHorarios();    // quita el slot recién ocupado
+  loadMyReservations(); // actualiza el historial del cliente
+  loadReservations();   // actualiza la vista del admin
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: loadMyReservations()
+   Muestra solo las reservas que pertenecen al cliente actual.
+
+   Filtra los documentos de "reservas" donde r.user === currentUser.
+   Si no encuentra ninguna, muestra "No tienes reservas."
+   ════════════════════════════════════════════════════════════ */
+window.loadMyReservations = async function () {
+
+  const container = document.getElementById("myReservations");
+  container.innerHTML = "";
+
+  const snapshot = await getDocs(reservationsRef);
+
+  let hay = false; // bandera para saber si encontró reservas
+
+  snapshot.forEach(docu => {
+    const r = docu.data();
+
+    if(r.user === currentUser){
+      hay = true;
+
+      container.innerHTML += `
+        <div class="card">
+          <h4>✂️ ${r.service}</h4>
+          <p>📅 ${r.date}</p>
+          <p>🕒 ${r.time}</p>
+          <p>💰 $${r.price}</p>
+        </div>
+      `;
+    }
+  });
+
+  if(!hay){
+    container.innerHTML = `<p>No tienes reservas.</p>`;
+  }
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIÓN: loadReservations()
+   Muestra TODAS las reservas del sistema al administrador.
+
+   Similar a loadMyReservations pero sin filtrar por usuario:
+   el admin ve las citas de todos los clientes, incluyendo
+   el nombre del cliente que hizo cada reserva.
+   ════════════════════════════════════════════════════════════ */
+window.loadReservations = async function () {
+
+  const container = document.getElementById("allReservations");
+  container.innerHTML = "";
+
+  const snapshot = await getDocs(reservationsRef);
+
+  let hay = false;
+
+  snapshot.forEach(docu => {
+    hay = true;
+    const r = docu.data();
+
+    container.innerHTML += `
+      <div class="card">
+        <h4>👤 ${r.user}</h4>
+        <p>✂️ ${r.service}</p>
+        <p>📅 ${r.date}</p>
+        <p>🕒 ${r.time}</p>
+        <p>💰 $${r.price}</p>
+      </div>
+    `;
+  });
+
+  if(!hay){
+    container.innerHTML = `<p>No hay reservas.</p>`;
+  }
+};
+
+
+/* ════════════════════════════════════════════════════════════
+   FUNCIONES DE NAVEGACIÓN
+   Controlan qué pantalla/sección es visible en cada momento,
+   añadiendo o quitando la clase CSS "hidden".
+   ════════════════════════════════════════════════════════════ */
+
+/*
+  logout(): recarga la página completa.
+  Esto elimina currentUser y selectedHour de memoria,
+  devolviendo la app al estado inicial (pantalla de login).
+*/
+window.logout = function () {
+  location.reload();
+};
+
+/*
+  mostrarLogin(): oculta los botones iniciales y muestra
+  el formulario de login.
+*/
+window.mostrarLogin = function () {
+  document.getElementById("homeOptions").classList.add("hidden");
+  document.getElementById("loginBox").classList.remove("hidden");
+};
+
+/*
+  mostrarRegistro(): oculta los botones iniciales y muestra
+  el formulario de registro.
+*/
+window.mostrarRegistro = function () {
+  document.getElementById("homeOptions").classList.add("hidden");
+  document.getElementById("registerBox").classList.remove("hidden");
+};
+
+/*
+  volverInicio(): oculta los formularios de login/registro
+  y vuelve a mostrar los botones iniciales.
+*/
+window.volverInicio = function () {
+  document.getElementById("homeOptions").classList.remove("hidden");
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("registerBox").classList.add("hidden");
+};
+
+/*
+  mostrarSeccion(id): en el panel del cliente,
+  oculta el menú y muestra la sección con el id dado
+  (catálogo, reservar o mis reservas).
+*/
+window.mostrarSeccion = function (id) {
+  document.getElementById("clientMenu").classList.add("hidden");
+  document.getElementById(id).classList.remove("hidden");
+};
+
+/*
+  volverMenuCliente(): oculta todas las secciones del cliente
+  y vuelve a mostrar el menú principal del cliente.
+*/
+window.volverMenuCliente = function () {
+  document.getElementById("clientMenu").classList.remove("hidden");
+  document.getElementById("catalogoSection").classList.add("hidden");
+  document.getElementById("reservarSection").classList.add("hidden");
+  document.getElementById("misReservasSection").classList.add("hidden");
+};
+
+/*
+  mostrarAdmin(id): en el panel de admin,
+  oculta el menú y muestra la sección elegida.
+*/
+window.mostrarAdmin = function (id) {
+  document.getElementById("adminMenu").classList.add("hidden");
+  document.getElementById(id).classList.remove("hidden");
+};
+
+/*
+  volverAdmin(): oculta todas las secciones del admin
+  y vuelve a mostrar el menú principal del admin.
+*/
+window.volverAdmin = function () {
+  document.getElementById("adminMenu").classList.remove("hidden");
+  document.getElementById("addServiceSection").classList.add("hidden");
+  document.getElementById("servicesSection").classList.add("hidden");
+  document.getElementById("editSection").classList.add("hidden");
+  document.getElementById("reservationsSection").classList.add("hidden");
+};
+
+</script>
+
+</body>
+</html>
